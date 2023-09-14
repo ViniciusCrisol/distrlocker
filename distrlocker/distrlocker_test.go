@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	containerURL     = "127.0.0.1:6379"
 	containerImg     = "redis:latest"
 	redisDefaultHost = "127.0.0.1"
 	redisDefaultPort = "6379"
@@ -36,7 +37,6 @@ var (
 
 func createTestContainer() func() {
 	ctx := context.Background()
-
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		panic(err)
@@ -51,7 +51,6 @@ func createTestContainer() func() {
 	}
 
 	cli.ContainerStart(ctx, ctr.ID, types.ContainerStartOptions{})
-
 	return func() {
 		cli.ContainerStop(ctx, ctr.ID, container.StopOptions{})
 		cli.ContainerRemove(ctx, ctr.ID, types.ContainerRemoveOptions{})
@@ -64,17 +63,19 @@ func TestAcquire(ts *testing.T) {
 
 	dsl := NewDistrLocker(
 		5000,
-		redis.NewClient(&redis.Options{Addr: "127.0.0.1:6379"}))
+		redis.NewClient(&redis.Options{Addr: containerURL, WriteTimeout: time.Second * 3}))
 
 	ts.Run("It should not be able to acquire a lock if it is not available", func(t *testing.T) {
 		l, err := dsl.Acquire("key")
 		if err != nil {
 			t.Errorf("Failed to acquire lock")
 		}
+
 		_, err = dsl.Acquire("key")
 		if err != errs.ErrLockCannotBeAcquired {
 			t.Errorf("Failed to lock resource")
 		}
+
 		if l.Release() != nil {
 			t.Errorf("Failed to release lock")
 		}
@@ -85,6 +86,7 @@ func TestAcquire(ts *testing.T) {
 		if err != nil {
 			t.Errorf("Failed to acquire lock")
 		}
+
 		if l.Release() != nil {
 			t.Errorf("Failed to release lock")
 		}
@@ -95,6 +97,7 @@ func TestAcquire(ts *testing.T) {
 		execSequence := []int{}
 		veryHardProcessing := func(id int) {
 			defer wg.Done()
+
 			for {
 				l, err := dsl.Acquire("key")
 				if err == errs.ErrLockCannotBeAcquired {
@@ -115,18 +118,16 @@ func TestAcquire(ts *testing.T) {
 			}
 		}
 
-		wk := 40
-		for i := 1; i <= wk; i++ {
+		for i := 1; i <= 40; i++ {
 			wg.Add(1)
 			go veryHardProcessing(i)
 		}
 		wg.Wait()
 
 		for i, id := range execSequence {
-			if id%2 == 0 && id != execSequence[i-1] {
+			if i%2 != 0 && id != execSequence[i-1] {
 				t.Errorf("The lock process failed")
 			}
-			break
 		}
 	})
 }

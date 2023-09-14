@@ -36,6 +36,7 @@ func (locker *DistrLocker) Acquire(key string) (lock.Lock, error) {
 	lck.Key = key
 	lck.Val = val
 	lck.RedisClient = locker.redisClient
+
 	return lck, nil
 }
 
