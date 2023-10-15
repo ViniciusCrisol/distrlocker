@@ -16,17 +16,16 @@ type Lock struct {
 }
 
 func (lock *Lock) Release() error {
-	ks := []string{lock.Key}
 	ctx := context.Background()
 
-	r, err := scripts.ReleaseScript.Run(ctx, lock.RedisClient, ks, lock.Val).Result()
-	if err == redis.Nil || !lock.isRGood(r) {
+	r, err := scripts.ReleaseScript.Run(ctx, lock.RedisClient, []string{lock.Key}, lock.Val).Result()
+	if err == redis.Nil || !lock.isResponseGood(r) {
 		return errs.ErrLockCannotBeReleased
 	}
 	return err
 }
 
-func (lock *Lock) isRGood(r interface{}) bool {
+func (lock *Lock) isResponseGood(r interface{}) bool {
 	i := r.(int64)
 	return i == 1
 }

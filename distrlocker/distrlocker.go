@@ -24,26 +24,23 @@ func NewDistrLocker(timeout int, redisClient redis.Scripter) *DistrLocker {
 }
 
 func (locker *DistrLocker) Acquire(key string) (lock.Lock, error) {
-	var (
-		lck lock.Lock
-		val = rand.Int()
-		ctx = context.Background()
-		err = locker.acquireLock(ctx, key, val)
-	)
-	if err != nil {
-		return lck, err
-	}
-	lck.Key = key
-	lck.Val = val
-	lck.RedisClient = locker.redisClient
+	var l lock.Lock
+	val := rand.Int()
+	ctx := context.Background()
 
-	return lck, nil
+	err := locker.acquireLock(ctx, key, val)
+	if err != nil {
+		return l, err
+	}
+	l.Key = key
+	l.Val = val
+	l.RedisClient = locker.redisClient
+
+	return l, nil
 }
 
 func (locker *DistrLocker) acquireLock(ctx context.Context, key string, val int) error {
-	ks := []string{key}
-
-	_, err := scripts.AcquireScript.Run(ctx, locker.redisClient, ks, val, locker.timeout).Result()
+	_, err := scripts.AcquireScript.Run(ctx, locker.redisClient, []string{key}, val, locker.timeout).Result()
 	if err == redis.Nil {
 		return errs.ErrLockCannotBeAcquired
 	}
