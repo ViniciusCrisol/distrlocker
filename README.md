@@ -1,53 +1,57 @@
 # Distrlocker
 
-A biblioteca Distrlocker, escrita em Golang, proporciona uma maneira simples e eficaz de gerenciar locks distribuídos
-por meio do Redis. Locks distribuídos são uma primitiva valiosa em ambientes nos quais diversos processos precisam
-operar com recursos compartilhados de maneira exclusiva.
+O README está disponível também em [português](README-pt.md).
 
-## Instalação
+---
 
-Para facilitar a integração com o Redis, esta biblioteca utiliza como dependência a biblioteca oficial do serviço
-([github.com/redis/go-redis](https://github.com/redis/go-redis)). Para incorporar os pacotes em seu projeto, execute os
-seguintes comandos:
+The Distrlocker library, written in Golang, provides a simple and effective way to manage distributed locks through
+Redis. Distributed locks are a valuable primitive in environments where multiple processes need to operate on shared
+resources exclusively.
+
+## Installation
+
+To facilitate integration with Redis, this library uses the official Redis client library as a dependency 
+([github.com/redis/go-redis](https://github.com/redis/go-redis)). To incorporate the packages into your
+project, execute the following commands:
 
 ```bash
 go get -u github.com/viniciuscrisol/distrlocker
 go get -u github.com/redis/go-redis/v9
 ```
 
-## Exemplo
+## Example
 
-O seguinte exemplo ilustra um caso de uso simples para aquisição e liberação de um lock:
+The following example illustrates a simple use case for acquiring and releasing a lock:
 
 ```go
 func main() {
-    // Criação de um cliente Redis
-    clienteRedis := redis.NewClient(
+    // Creating a Redis client
+    redisClient := redis.NewClient(
         &redis.Options{Addr: "127.0.0.1:6379", WriteTimeout: time.Second * 3},
     )
 
-    // Criação do locker distribuído com o timeout de 5000 ms
-    locker := distrlocker.NewDistrLocker(5000, clienteRedis)
+    // Creating a distributed locker with a timeout of 5000 ms
+    locker := distrlocker.NewDistrLocker(5000, redisClient)
 
-    // Obtenção do lock
-    meuLock, err := locker.Acquire("minha-chave")
+    // Acquiring the lock
+    myLock, err := locker.Acquire("my-key")
     if err != nil {
-        fmt.Println("Falha ao adquirir o lock:", err)
+        fmt.Println("Failed to acquire the lock:", err)
         return
     }
-    // Liberação do lock. Caso os 5000 ms estipulados
-    // expirem, o lock será liberado automaticamente
-    defer meuLock.Release()
+    // Releasing the lock. If the specified 5000 ms expire,
+    // the lock will be released automatically
+    defer myLock.Release()
 
-    // Processamento intensivo...
+    // Intensive processing...
 }
 ```
 
-## Testes
+## Tests
 
-A biblioteca inclui um conjunto de testes que simulam cenários de aquisição e liberação de locks. Para executar os
-testes, é necessário ter o Docker instalado. Além disso, deve-se garantir que a porta 6379 esteja disponível.
-Ao executar o seguinte comando, a cobertura será obtida:
+The library includes a set of tests that simulate scenarios of acquiring and releasing locks. To run the tests, Docker
+must be installed. Additionally, ensure that port 6379 is available. By executing the following command, coverage will
+be obtained:
 
 ```bash
 go test ./... -cover -coverprofile=coverage
